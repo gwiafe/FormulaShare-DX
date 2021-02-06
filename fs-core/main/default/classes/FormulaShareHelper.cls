@@ -21,11 +21,12 @@
 
 
 // Interface implementation is used to enable dynamic routing to relevant class
-global with sharing class FormulaShareHelper implements FormulaShareIHelper {
+global with sharing class FormulaShareHelper{
 
 	private class FormulaShareException extends Exception{}
     @TestVisible private FormulaShareIHelper iHelper;
     private static FormulaShare_Settings__mdt settings;
+    
 
     global FormulaShareHelper() {
 
@@ -62,4 +63,25 @@ global with sharing class FormulaShareHelper implements FormulaShareIHelper {
         return iHelper.getSharesToDelete();
     }
 
+
+    global FormulaShareHelper(Map<Id,SObject> oldRecords, Map<Id,SObject> newRecords) {
+
+        // Get the default class type to use
+        Type impl = Type.forName('FormulaShareAsyncHelperProcessor');
+
+        // If settings specify an override, use this instead
+        if(settings == null) {
+            settings = FormulaShareSettingsSelector.construct().selectActiveSettings();
+        }
+        String helperOverrideClass = settings.Trigger_Helper_Class_Override__c;
+        if(!String.isBlank(helperOverrideClass)) {
+            Type overrideImpl = Type.forName(helperOverrideClass);
+            if(overrideImpl != null) {
+                impl = overrideImpl;
+            }
+        }
+
+        // Dynamically instatiate the right implementation
+        iHelper = (FormulaShareIHelper) impl.newInstance();
+   }
 }
